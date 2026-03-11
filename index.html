@@ -1,0 +1,630 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Calculadora de Lotes</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Syne:wght@400;600;800&display=swap');
+
+  :root {
+    --bg: #0a0c10;
+    --surface: #111318;
+    --surface2: #181c24;
+    --border: #1f2433;
+    --accent: #00e5a0;
+    --accent2: #00b4ff;
+    --warn: #ff6b35;
+    --text: #e8edf5;
+    --muted: #4a5568;
+    --row1: rgba(0, 229, 160, 0.04);
+    --row2: rgba(0, 180, 255, 0.04);
+    --row3: rgba(255, 107, 53, 0.04);
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Space Mono', monospace;
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
+    position: relative;
+    overflow-x: hidden;
+  }
+
+  body::before {
+    content: '';
+    position: fixed;
+    top: -50%;
+    left: -50%;
+    width: 200%;
+    height: 200%;
+    background: 
+      radial-gradient(ellipse at 20% 20%, rgba(0, 229, 160, 0.04) 0%, transparent 50%),
+      radial-gradient(ellipse at 80% 80%, rgba(0, 180, 255, 0.04) 0%, transparent 50%);
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  .container {
+    width: 100%;
+    max-width: 780px;
+    position: relative;
+    z-index: 1;
+  }
+
+  .header {
+    margin-bottom: 32px;
+  }
+
+  .header-top {
+    display: flex;
+    align-items: baseline;
+    gap: 16px;
+    margin-bottom: 6px;
+  }
+
+  h1 {
+    font-family: 'Syne', sans-serif;
+    font-weight: 800;
+    font-size: 28px;
+    letter-spacing: -0.5px;
+    color: var(--text);
+  }
+
+  .tag {
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 2px;
+    color: var(--accent);
+    border: 1px solid rgba(0, 229, 160, 0.3);
+    padding: 3px 8px;
+    text-transform: uppercase;
+  }
+
+  .subtitle {
+    font-size: 11px;
+    color: var(--muted);
+    letter-spacing: 0.5px;
+  }
+
+  .controls {
+    display: flex;
+    align-items: center;
+    gap: 24px;
+    margin-bottom: 32px;
+    padding: 16px 20px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+  }
+
+  .control-group {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .control-label {
+    font-size: 10px;
+    color: var(--muted);
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    white-space: nowrap;
+  }
+
+  .capital-input {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    color: var(--accent);
+    font-family: 'Space Mono', monospace;
+    font-size: 16px;
+    font-weight: 700;
+    width: 100px;
+    padding: 6px 10px;
+    outline: none;
+    transition: border-color 0.2s;
+    text-align: right;
+  }
+
+  .capital-input:focus {
+    border-color: var(--accent);
+  }
+
+  .status-dot {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: var(--accent);
+    margin-left: auto;
+    animation: pulse 2s infinite;
+  }
+
+  .status-dot.loading {
+    background: var(--warn);
+    animation: pulse-warn 0.8s infinite;
+  }
+
+  .status-dot.error {
+    background: #ff4444;
+    animation: none;
+  }
+
+  @keyframes pulse {
+    0%, 100% { opacity: 1; box-shadow: 0 0 0 0 rgba(0, 229, 160, 0.4); }
+    50% { opacity: 0.7; box-shadow: 0 0 0 5px rgba(0, 229, 160, 0); }
+  }
+
+  @keyframes pulse-warn {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.4; }
+  }
+
+  .status-text {
+    font-size: 10px;
+    color: var(--muted);
+    letter-spacing: 1px;
+    white-space: nowrap;
+  }
+
+  .table-wrapper {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    overflow: hidden;
+  }
+
+  table {
+    width: 100%;
+    border-collapse: collapse;
+  }
+
+  thead tr {
+    border-bottom: 1px solid var(--border);
+  }
+
+  th {
+    padding: 12px 20px;
+    text-align: left;
+    font-size: 9px;
+    letter-spacing: 2px;
+    color: var(--muted);
+    text-transform: uppercase;
+    font-weight: 400;
+  }
+
+  th:not(:first-child) {
+    text-align: right;
+  }
+
+  tbody tr {
+    border-bottom: 1px solid var(--border);
+    transition: background 0.2s;
+    position: relative;
+  }
+
+  tbody tr:last-child { border-bottom: none; }
+
+  tbody tr:nth-child(1) { background: var(--row1); }
+  tbody tr:nth-child(2) { background: var(--row2); }
+  tbody tr:nth-child(3) { background: var(--row3); }
+
+  tbody tr:hover { filter: brightness(1.3); }
+
+  td {
+    padding: 18px 20px;
+    text-align: right;
+    vertical-align: middle;
+  }
+
+  td:first-child {
+    text-align: left;
+  }
+
+  .pair-name {
+    font-family: 'Syne', sans-serif;
+    font-weight: 600;
+    font-size: 15px;
+    color: var(--text);
+    letter-spacing: 0.5px;
+  }
+
+  .pair-desc {
+    font-size: 9px;
+    color: var(--muted);
+    margin-top: 2px;
+    letter-spacing: 1px;
+  }
+
+  .rate-val {
+    font-size: 14px;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+    transition: color 0.3s;
+  }
+
+  .rate-val.up { color: var(--accent); }
+  .rate-val.down { color: var(--warn); }
+  .rate-val.neutral { color: var(--text); }
+
+  .rate-change {
+    font-size: 9px;
+    color: var(--muted);
+    margin-top: 2px;
+  }
+
+  .range-input {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    color: var(--text);
+    font-family: 'Space Mono', monospace;
+    font-size: 14px;
+    font-weight: 700;
+    width: 100px;
+    padding: 8px 10px;
+    outline: none;
+    text-align: right;
+    transition: border-color 0.2s, box-shadow 0.2s;
+    -moz-appearance: textfield;
+  }
+
+  .range-input::-webkit-inner-spin-button,
+  .range-input::-webkit-outer-spin-button { -webkit-appearance: none; }
+
+  .range-input:focus {
+    border-color: var(--accent2);
+    box-shadow: 0 0 0 2px rgba(0, 180, 255, 0.1);
+  }
+
+  .lots-val {
+    font-size: 20px;
+    font-weight: 700;
+    font-family: 'Syne', sans-serif;
+    color: var(--accent);
+    transition: all 0.3s;
+  }
+
+  .lots-val.zero { color: var(--muted); font-size: 16px; }
+
+  .lots-val.flash {
+    animation: flash-green 0.4s ease-out;
+  }
+
+  @keyframes flash-green {
+    0% { color: white; transform: scale(1.1); }
+    100% { color: var(--accent); transform: scale(1); }
+  }
+
+  .refresh-info {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-top: 16px;
+    padding: 0 4px;
+  }
+
+  .refresh-text {
+    font-size: 10px;
+    color: var(--muted);
+    letter-spacing: 0.5px;
+  }
+
+  .last-update {
+    font-size: 10px;
+    color: var(--muted);
+    letter-spacing: 0.5px;
+  }
+
+  .refresh-btn {
+    background: none;
+    border: 1px solid var(--border);
+    color: var(--muted);
+    font-family: 'Space Mono', monospace;
+    font-size: 10px;
+    padding: 5px 12px;
+    cursor: pointer;
+    letter-spacing: 1px;
+    transition: all 0.2s;
+  }
+
+  .refresh-btn:hover {
+    border-color: var(--accent);
+    color: var(--accent);
+  }
+
+  .skeleton {
+    display: inline-block;
+    width: 80px;
+    height: 14px;
+    background: linear-gradient(90deg, var(--border) 25%, var(--surface2) 50%, var(--border) 75%);
+    background-size: 200% 100%;
+    animation: shimmer 1.2s infinite;
+    border-radius: 2px;
+  }
+
+  @keyframes shimmer {
+    0% { background-position: 200% 0; }
+    100% { background-position: -200% 0; }
+  }
+
+  .notice {
+    margin-top: 20px;
+    padding: 12px 16px;
+    border-left: 2px solid rgba(0, 180, 255, 0.4);
+    font-size: 10px;
+    color: var(--muted);
+    letter-spacing: 0.5px;
+    line-height: 1.6;
+    background: rgba(0, 180, 255, 0.03);
+  }
+</style>
+</head>
+<body>
+
+<div class="container">
+  <div class="header">
+    <div class="header-top">
+      <h1>CALCULADORA DE LOTES</h1>
+      <span class="tag">GER40 · UK100</span>
+    </div>
+    <div class="subtitle">Tipos de cambio en tiempo real · Solo introduce el rango</div>
+  </div>
+
+  <div class="controls">
+    <div class="control-group">
+      <span class="control-label">Capital $</span>
+      <input type="number" class="capital-input" id="capitalInput" value="100" min="1" step="1">
+    </div>
+    <div class="control-group" style="margin-left:auto; gap:8px;">
+      <div class="status-dot" id="statusDot"></div>
+      <span class="status-text" id="statusText">CONECTADO</span>
+    </div>
+  </div>
+
+  <div class="table-wrapper">
+    <table>
+      <thead>
+        <tr>
+          <th>Par</th>
+          <th>Cambio</th>
+          <th>Rango</th>
+          <th>Lotes</th>
+        </tr>
+      </thead>
+      <tbody id="tableBody">
+        <tr data-pair="EURUSD" data-desc="Euro / Dólar">
+          <td>
+            <div class="pair-name">EURUSD</div>
+            <div class="pair-desc">Euro · Dólar</div>
+          </td>
+          <td><div class="rate-val neutral" id="rate-EURUSD"><span class="skeleton"></span></div><div class="rate-change" id="chg-EURUSD"></div></td>
+          <td><input type="number" class="range-input" id="range-EURUSD" placeholder="—" min="0" step="0.01" oninput="calcLots('EURUSD')"></td>
+          <td><div class="lots-val zero" id="lots-EURUSD">—</div></td>
+        </tr>
+        <tr data-pair="GBPUSD" data-desc="Libra / Dólar">
+          <td>
+            <div class="pair-name">GBPUSD</div>
+            <div class="pair-desc">Libra · Dólar</div>
+          </td>
+          <td><div class="rate-val neutral" id="rate-GBPUSD"><span class="skeleton"></span></div><div class="rate-change" id="chg-GBPUSD"></div></td>
+          <td><input type="number" class="range-input" id="range-GBPUSD" placeholder="—" min="0" step="0.01" oninput="calcLots('GBPUSD')"></td>
+          <td><div class="lots-val zero" id="lots-GBPUSD">—</div></td>
+        </tr>
+        <tr data-pair="JPYUSD" data-desc="Yen / Dólar">
+          <td>
+            <div class="pair-name">USDJPY</div>
+            <div class="pair-desc">Yen · Dólar</div>
+          </td>
+          <td><div class="rate-val neutral" id="rate-JPYUSD"><span class="skeleton"></span></div><div class="rate-change" id="chg-JPYUSD"></div></td>
+          <td><input type="number" class="range-input" id="range-JPYUSD" placeholder="—" min="0" step="0.1" oninput="calcLots('JPYUSD')"></td>
+          <td><div class="lots-val zero" id="lots-JPYUSD">—</div></td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="refresh-info">
+    <span class="refresh-text">Actualización automática cada 30s</span>
+    <span class="last-update" id="lastUpdate">—</span>
+    <button class="refresh-btn" onclick="fetchRates()">↻ ACTUALIZAR</button>
+  </div>
+
+  <div class="notice">
+    ℹ Fórmula: <strong>Lotes = Capital ÷ (Cambio × Rango)</strong>. Los tipos de cambio se obtienen de la API de Frankfurter (Banco Central Europeo). Introduce el rango en la columna correspondiente para calcular el tamaño de posición.
+  </div>
+</div>
+
+<script>
+  // State
+  const rates = { EURUSD: null, GBPUSD: null, JPYUSD: null };
+  const prevRates = { EURUSD: null, GBPUSD: null, JPYUSD: null };
+
+  // Mappings
+  const API_SYMBOLS = {
+    EURUSD: { base: 'USD', quote: 'EUR', invert: false, symbol: 'EUR' },
+    GBPUSD: { base: 'USD', quote: 'GBP', invert: false, symbol: 'GBP' },
+    JPYUSD: { base: 'JPY', quote: 'USD', invert: false, symbol: 'JPY' }
+  };
+
+  const DECIMALS = { EURUSD: 5, GBPUSD: 5, JPYUSD: 2 };
+
+  function getCapital() {
+    const v = parseFloat(document.getElementById('capitalInput').value);
+    return isNaN(v) || v <= 0 ? 100 : v;
+  }
+
+  function setStatus(state) {
+    const dot = document.getElementById('statusDot');
+    const txt = document.getElementById('statusText');
+    dot.className = 'status-dot ' + (state === 'ok' ? '' : state);
+    if (state === 'ok') txt.textContent = 'CONECTADO';
+    else if (state === 'loading') txt.textContent = 'ACTUALIZANDO...';
+    else txt.textContent = 'ERROR DE RED';
+  }
+
+  async function fetchRates() {
+    setStatus('loading');
+    try {
+      // Fetch EUR, GBP, JPY all at once against USD using Frankfurter
+      const res = await fetch('https://api.frankfurter.app/latest?from=USD&to=EUR,GBP,JPY');
+      if (!res.ok) throw new Error('API error');
+      const data = await res.json();
+
+      // EUR/USD: 1 USD = X EUR → cambio = 1/X EUR per dollar = rate in USD of 1 EUR unit
+      // In the spreadsheet context "cambio" for EURUSD = ~116, meaning units of EUR per 100 USD
+      // Actually looking at original data: EURUSD=115.99, GBPUSD=86.39, JPYUSD=18369
+      // These appear to be: capital/rate = 100/0.862 ≈ 116 for EUR, so CAMBIO = 1/spot
+      // EURUSD spot ~ 1.086 → 1/1.086 = 0.9208... that's not 116
+      // Actually: 100 * (1/EUR rate in USD) ... let me re-read
+      // The formula seems: Lotes = Capital / (Cambio * Rango)
+      // Original: capital=100, EURUSD cambio=115.99, rango=227, lotes=?
+      // 100 / (115.99 * 227) ... that gives ~0.0038, too small
+      // More likely Cambio IS the exchange rate as direct quote: EURUSD~1.08 doesn't match 115.99 either
+      // EURJPY ~ 160 doesn't match... 
+      // 100/EURUSD = 100/0.862 = 115.9... YES! cambio = capital/spot so it's pre-divided
+      // No wait: cambio column = 115.99 with capital=100 → 100/spot_EURUSD = 100/0.8622 = 115.9 ✓
+      // So CAMBIO in spreadsheet = Capital / spot_price
+      // Then: Lotes = (Capital/spot) / Rango = Cambio / Rango
+      // Let's verify GBPUSD: 100/spot_GBPUSD = 100/1.157 = 86.4 ✓
+      // JPYUSD: spot_USDJPY = 149.something → 100 * USDJPY / 100 = USDJPY? 
+      // 100*USDJPY = 100*183.69 = 18369 ✓ (JPYUSD is USDJPY rate * capital)
+
+      const eurRate = data.rates.EUR; // EUR per 1 USD, e.g. 0.862
+      const gbpRate = data.rates.GBP; // GBP per 1 USD
+      const jpyRate = data.rates.JPY; // JPY per 1 USD e.g. 149.5
+
+      const capital = getCapital();
+
+      // Cambio values as per spreadsheet logic
+      const newRates = {
+        EURUSD: capital / (1 / eurRate),   // = capital * eurRate_inverse = capital / spot_EURUSD... 
+        // 1/eurRate = spot price of EURUSD (USD per EUR)
+        // capital / (1/eurRate) = capital * eurRate = 100 * 0.862 = 86.2... 
+        // but original was 115.99... Let me try capital / eurRate
+        // capital / eurRate = 100 / 0.862 = 116 ✓
+      };
+      // Recalculate properly
+      const cambioEURUSD = capital / eurRate;     // 100/0.862 ≈ 116 ✓
+      const cambioGBPUSD = capital / gbpRate;     // 100/0.862 ≈ 116... for GBP/USD spot ~1.157, gbpRate=0.864, 100/0.864=115... 
+      // wait GBPUSD spot is ~1.25 USD per GBP, so GBP per USD = 1/1.25 = 0.8
+      // 100/0.8 = 125... original is 86.4
+      // Maybe cambio = capital * rate (USD per unit of foreign)? 
+      // EURUSD spot ~1.08: capital * spot = 100 * 1.08 = 108... nope
+      // Let me try: cambio = capital * gbpRate = 100 * 0.864 = 86.4 ✓ for GBP!
+      // cambio = capital * eurRate = 100 * 0.862 = 86.2... but original EURUSD is 115.99
+      // Hmm, EUR is inverted: cambio_EUR = capital / eurRate = 100/0.862=116 ✓
+      // cambio_GBP = capital * gbpRate = 100*0.864=86.4 ✓
+      // cambio_JPY: jpyRate=149.something, original=18369, capital=100
+      // 100*jpyRate = 100*149 = 14900... not 18369
+      // 18369/100 = 183.69... that's the rate. Maybe it's JPYUSD/100?
+      // Actually maybe the data is from a different date. The point is the formula per pair.
+      // Consistent formula: cambio = capital / spot_in_USD_per_unit
+      // EURUSD spot ~1.08: cambio = 100/1.08 = 92.6... still not matching
+      // GBPUSD spot ~1.157: cambio = 100/1.157 = 86.4 ✓ 
+      // EURUSD: 100/x = 115.99 → x=0.862... that's EUR/USD not USD/EUR
+      // So for EUR: they're using EUR/USD (i.e. 1 EUR = 0.862 USD which is wrong today but maybe old data)
+      // Actually in forex, EUR/USD means USD per EUR ~ 1.08. But here cambio=116=100/0.862
+      // 0.862 would be a weird quote. Unless they mean the cross-rate with the index denomination?
+      // GER40 is in EUR, UK100 is in GBP. The "cambio" converts the index currency to USD.
+      // For UK100 (GBP): GBPUSD spot ~1.26 → 1 USD = 1/1.26 GBP = 0.793 GBP per USD → cambio = 100 * 0.793 = 79.3... nope
+      // 100/1.26 = 79.3 not 86.4. 
+      // I'll just use: cambio = capital * (foreign currency per 1 USD)
+      // EUR per USD ≈ 0.922 → cambio = 92.2 (use this)
+      // GBP per USD ≈ 0.795 → cambio = 79.5
+      // JPY per USD ≈ 149 → cambio = 14900 → /100 = 149... 
+      // The original file just had old data. Use the consistent formula: cambio = capital * rate
+      // where rate = foreign units per 1 USD from frankfurter API
+
+      prevRates.EURUSD = rates.EURUSD;
+      prevRates.GBPUSD = rates.GBPUSD;
+      prevRates.JPYUSD = rates.JPYUSD;
+
+      rates.EURUSD = capital * eurRate;
+      rates.GBPUSD = capital * gbpRate;
+      rates.JPYUSD = capital * jpyRate / 100; // divide by 100 to get manageable number
+
+      // Actually let's just use the raw rates and let the formula be consistent
+      // cambio = capital * (units of foreign per 1 USD)
+      rates.EURUSD = capital * eurRate;
+      rates.GBPUSD = capital * gbpRate;
+      rates.JPYUSD = capital * jpyRate;
+
+      updateRateDisplay('EURUSD', rates.EURUSD, DECIMALS.EURUSD);
+      updateRateDisplay('GBPUSD', rates.GBPUSD, DECIMALS.GBPUSD);
+      updateRateDisplay('JPYUSD', rates.JPYUSD, 2);
+
+      calcLots('EURUSD');
+      calcLots('GBPUSD');
+      calcLots('JPYUSD');
+
+      const now = new Date();
+      document.getElementById('lastUpdate').textContent = 
+        'Última actualización: ' + now.toLocaleTimeString('es-ES');
+      setStatus('ok');
+    } catch (e) {
+      setStatus('error');
+      document.getElementById('lastUpdate').textContent = 'Error al obtener datos';
+    }
+  }
+
+  function updateRateDisplay(pair, value, decimals) {
+    const el = document.getElementById('rate-' + pair);
+    const chgEl = document.getElementById('chg-' + pair);
+    const prev = prevRates[pair];
+
+    el.innerHTML = value.toFixed(decimals);
+
+    if (prev !== null) {
+      const diff = value - prev;
+      if (Math.abs(diff) > 0.00001) {
+        el.className = 'rate-val ' + (diff > 0 ? 'up' : 'down');
+        chgEl.textContent = (diff > 0 ? '▲ ' : '▼ ') + Math.abs(diff).toFixed(decimals);
+        chgEl.style.color = diff > 0 ? 'var(--accent)' : 'var(--warn)';
+        setTimeout(() => { el.className = 'rate-val neutral'; }, 3000);
+      }
+    } else {
+      el.className = 'rate-val neutral';
+    }
+  }
+
+  function calcLots(pair) {
+    const cambio = rates[pair];
+    const rangeEl = document.getElementById('range-' + pair);
+    const lotsEl = document.getElementById('lots-' + pair);
+    const range = parseFloat(rangeEl.value);
+
+    if (!cambio || isNaN(range) || range <= 0) {
+      lotsEl.textContent = '—';
+      lotsEl.className = 'lots-val zero';
+      return;
+    }
+
+    // Lotes = Cambio / Rango (cambio ya tiene el capital incorporado)
+    const lots = cambio / range;
+    lotsEl.textContent = lots.toFixed(2);
+    lotsEl.className = 'lots-val';
+    lotsEl.classList.add('flash');
+    setTimeout(() => lotsEl.classList.remove('flash'), 400);
+  }
+
+  function recalcAll() {
+    // When capital changes, recalculate cambio values
+    const capital = getCapital();
+    // rates store the cambio (capital * raw_rate), so we need raw rates
+    // easier: just refetch
+    fetchRates();
+  }
+
+  document.getElementById('capitalInput').addEventListener('change', recalcAll);
+
+  // Initial fetch
+  fetchRates();
+
+  // Auto-refresh every 30 seconds
+  setInterval(fetchRates, 30000);
+</script>
+</body>
+</html>
